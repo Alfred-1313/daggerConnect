@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# DaggerConnect Installer v2.2 (Corrected Profiles)
-
-# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -12,7 +9,6 @@ CYAN='\033[0;36m'
 WHITE='\033[1;37m'
 NC='\033[0m'
 
-# Installation directories
 INSTALL_DIR="/usr/local/bin"
 CONFIG_DIR="/etc/DaggerConnect"
 SYSTEMD_DIR="/etc/systemd/system"
@@ -20,7 +16,6 @@ SYSTEMD_DIR="/etc/systemd/system"
 GITHUB_REPO="https://github.com/itsFLoKi/DaggerConnect"
 BINARY_URL="$GITHUB_REPO/raw/main/DaggerConnect"
 
-# Banner
 show_banner() {
     echo -e "${CYAN}"
     echo "
@@ -44,7 +39,6 @@ show_banner() {
     echo ""
 }
 
-# Check root
 check_root() {
     if [[ $EUID -ne 0 ]]; then
         echo -e "${RED}❌ This script must be run as root${NC}"
@@ -52,7 +46,6 @@ check_root() {
     fi
 }
 
-# Install dependencies
 install_dependencies() {
     echo -e "${YELLOW}📦 Installing dependencies...${NC}"
     if command -v apt &>/dev/null; then
@@ -67,7 +60,6 @@ install_dependencies() {
     echo -e "${GREEN}✓ Dependencies installed${NC}"
 }
 
-# Download binary
 download_binary() {
     echo -e "${YELLOW}⬇️  Downloading DaggerConnect binary...${NC}"
     mkdir -p "$INSTALL_DIR"
@@ -87,7 +79,6 @@ download_binary() {
     fi
 }
 
-# Create systemd service
 create_systemd_service() {
     local MODE=$1
     local SERVICE_NAME="DaggerConnect-${MODE}"
@@ -117,9 +108,6 @@ EOF
     echo -e "${GREEN}✓ Systemd service for ${MODE^} created: ${SERVICE_NAME}.service${NC}"
 }
 
-# ---------------------------
-# Server Installation
-# ---------------------------
 install_server() {
     show_banner
     mkdir -p "$CONFIG_DIR"
@@ -129,7 +117,6 @@ install_server() {
     echo -e "${CYAN}═══════════════════════════════════════${NC}"
     echo ""
 
-    # Transport type
     echo -e "${YELLOW}Select Transport Type:${NC}"
     echo "  1) tcpmux  - TCP Multiplexing"
     echo "  2) kcpmux  - KCP Multiplexing (UDP based)"
@@ -145,13 +132,11 @@ install_server() {
         *) TRANSPORT="tcpmux" ;;
     esac
 
-    # Listen port (Tunnel Port)
     echo ""
     echo -e "${CYAN}Tunnel Port: Port for communication between Server and Client${NC}"
     read -p "Tunnel Port [2020]: " LISTEN_PORT
     LISTEN_PORT=${LISTEN_PORT:-2020}
 
-    # PSK
     echo ""
     while true; do
         read -sp "Enter PSK (Pre-Shared Key): " PSK
@@ -163,7 +148,6 @@ install_server() {
         fi
     done
 
-    # Profile (Corrected profiles)
     echo ""
     echo -e "${YELLOW}Select Performance Profile:${NC}"
     echo "  1) balanced      - Standard balanced performance"
@@ -180,7 +164,6 @@ install_server() {
         *) PROFILE="balanced" ;;
     esac
 
-    # TLS for wssmux
     CERT_FILE=""
     KEY_FILE=""
     if [ "$TRANSPORT" == "wssmux" ]; then
@@ -195,7 +178,6 @@ install_server() {
         fi
     fi
 
-    # Port mappings
     echo ""
     echo -e "${CYAN}═══════════════════════════════════════${NC}"
     echo -e "${CYAN}      PORT MAPPINGS${NC}"
@@ -206,7 +188,6 @@ install_server() {
         echo ""
         echo -e "${YELLOW}Add Port Mapping #$((COUNT+1))${NC}"
 
-        # Protocol
         echo "Protocol:"
         echo "  1) tcp"
         echo "  2) udp"
@@ -222,7 +203,6 @@ install_server() {
             fi
         done
 
-        # Build mappings
         BIND="0.0.0.0:${BIND_PORT}"
         TARGET="0.0.0.0:${BIND_PORT}"
 
@@ -248,12 +228,10 @@ install_server() {
         [[ "$add_more" =~ ^[Yy] ]] || break
     done
 
-    # Verbose
     echo ""
     read -p "Enable verbose logging? [y/N]: " VERBOSE
     [[ $VERBOSE =~ ^[Yy]$ ]] && VERBOSE="true" || VERBOSE="false"
 
-    # Write config (Profile values will be applied by the Go application)
     CONFIG_FILE="$CONFIG_DIR/server.yaml"
     cat > "$CONFIG_FILE" << EOF
 mode: "server"
@@ -265,7 +243,6 @@ verbose: ${VERBOSE}
 
 EOF
 
-    # Add TLS if provided
     if [[ -n "$CERT_FILE" ]]; then
         cat >> "$CONFIG_FILE" << EOF
 cert_file: "$CERT_FILE"
@@ -274,10 +251,8 @@ key_file: "$KEY_FILE"
 EOF
     fi
 
-    # Add mappings
     echo -e "maps:\n$MAPPINGS\n" >> "$CONFIG_FILE"
 
-    # Add default settings (will be overridden by profile in Go code)
     cat >> "$CONFIG_FILE" << 'EOF'
 smux:
   keepalive: 8
@@ -337,9 +312,6 @@ EOF
     main_menu
 }
 
-# ---------------------------
-# Client Installation
-# ---------------------------
 install_client() {
     show_banner
     mkdir -p "$CONFIG_DIR"
@@ -349,7 +321,6 @@ install_client() {
     echo -e "${CYAN}═══════════════════════════════════════${NC}"
     echo ""
 
-    # PSK
     while true; do
         read -sp "Enter PSK (must match server): " PSK
         echo ""
@@ -360,7 +331,6 @@ install_client() {
         fi
     done
 
-    # Profile (Corrected profiles)
     echo ""
     echo -e "${YELLOW}Select Performance Profile:${NC}"
     echo "  1) balanced      - Standard balanced performance"
@@ -381,15 +351,14 @@ install_client() {
    echo -e "${CYAN}═══════════════════════════════════════${NC}"
    echo -e "${CYAN}      CONNECTION PATHS${NC}"
    echo -e "${CYAN}═══════════════════════════════════════${NC}"
-   
-   # تغییر: از آرایه استفاده کنید
+
    declare -a PATH_ENTRIES=()
    COUNT=0
-   
+
    while true; do
        echo ""
        echo -e "${YELLOW}Add Connection Path #$((COUNT+1))${NC}"
-   
+
        echo "Select Transport Type:"
        echo "  1) tcpmux  - TCP Multiplexing"
        echo "  2) kcpmux  - KCP Multiplexing (UDP based)"
@@ -404,62 +373,60 @@ install_client() {
            4) T="wssmux" ;;
            *) T="tcpmux" ;;
        esac
-   
+
        read -p "Server address with Tunnel Port (e.g., 1.2.3.4:2020): " ADDR
        if [ -z "$ADDR" ]; then
            echo -e "${RED}Address cannot be empty!${NC}"
            continue
        fi
-   
+
        read -p "Connection pool size [2]: " POOL
        POOL=${POOL:-2}
-   
+
        read -p "Enable aggressive pool? [y/N]: " AGG
        [[ $AGG =~ ^[Yy]$ ]] && AGG_POOL="true" || AGG_POOL="false"
-   
-       # ذخیره در آرایه
+
        PATH_ENTRIES+=("  - transport: \"$T\"
        addr: \"$ADDR\"
        connection_pool: $POOL
        aggressive_pool: $AGG_POOL
        retry_interval: 3
        dial_timeout: 10")
-   
+
        COUNT=$((COUNT+1))
        echo -e "${GREEN}✓ Path added: $T -> $ADDR (pool: $POOL, aggressive: $AGG_POOL)${NC}"
-   
+
        read -p "Add another path? [y/N]: " MORE
        [[ ! $MORE =~ ^[Yy]$ ]] && break
    done
-   
-   # Verbose
+
    echo ""
    read -p "Enable verbose logging? [y/N]: " VERBOSE
    [[ $VERBOSE =~ ^[Yy]$ ]] && VERBOSE="true" || VERBOSE="false"
-   
+
    CONFIG_FILE="$CONFIG_DIR/client.yaml"
    cat > "$CONFIG_FILE" << EOF
    mode: "client"
    psk: "${PSK}"
    profile: "${PROFILE}"
    verbose: ${VERBOSE}
-   
+
    paths:
    EOF
-   
+
    for path_entry in "${PATH_ENTRIES[@]}"; do
        printf "%s\n" "$path_entry" >> "$CONFIG_FILE"
    done
-   
+
    cat >> "$CONFIG_FILE" << 'EOF'
-   
+
    smux:
      keepalive: 8
      max_recv: 8388608
      max_stream: 8388608
      frame_size: 32768
      version: 2
-   
+
    kcp:
      nodelay: 1
      interval: 10
@@ -468,7 +435,7 @@ install_client() {
      sndwnd: 1024
      rcvwnd: 1024
      mtu: 1400
-   
+
    advanced:
      tcp_nodelay: true
      tcp_keepalive: 15
@@ -485,7 +452,7 @@ install_client() {
      max_udp_flows: 1000
      udp_flow_timeout: 300
      udp_buffer_size: 4194304
-   
+
    heartbeat: 10
 EOF
 
@@ -505,9 +472,6 @@ EOF
     main_menu
 }
 
-# ---------------------------
-# Service Management
-# ---------------------------
 service_management() {
     local MODE=$1
     local SERVICE_NAME="DaggerConnect-${MODE}"
@@ -586,9 +550,6 @@ service_management() {
     esac
 }
 
-# ---------------------------
-# Settings Menu
-# ---------------------------
 settings_menu() {
     show_banner
     echo -e "${CYAN}═══════════════════════════════════════${NC}"
@@ -610,9 +571,6 @@ settings_menu() {
     esac
 }
 
-# ---------------------------
-# Uninstall
-# ---------------------------
 uninstall_DaggerConnect() {
     show_banner
     echo -e "${RED}═══════════════════════════════════════${NC}"
@@ -653,9 +611,6 @@ uninstall_DaggerConnect() {
     exit 0
 }
 
-# ---------------------------
-# Main Menu
-# ---------------------------
 main_menu() {
     show_banner
     echo -e "${CYAN}═══════════════════════════════════════${NC}"
@@ -681,14 +636,10 @@ main_menu() {
     esac
 }
 
-# ---------------------------
-# Execution
-# ---------------------------
 check_root
 show_banner
 install_dependencies
 
-# Check binary
 if [ ! -f "$INSTALL_DIR/DaggerConnect" ]; then
     echo -e "${YELLOW}DaggerConnect not found. Installing...${NC}"
     download_binary
