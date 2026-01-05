@@ -338,7 +338,7 @@ install_client() {
     echo "  3) latency       - Optimized for low latency"
     echo "  4) cpu-efficient - Low CPU usage"
     echo ""
-    read -p "Choice [1-5]: " profile_choice
+    read -p "Choice [1-4]: " profile_choice
     case $profile_choice in
         1) PROFILE="balanced" ;;
         2) PROFILE="aggressive" ;;
@@ -387,11 +387,11 @@ install_client() {
        [[ $AGG =~ ^[Yy]$ ]] && AGG_POOL="true" || AGG_POOL="false"
 
        PATH_ENTRIES+=("  - transport: \"$T\"
-       addr: \"$ADDR\"
-       connection_pool: $POOL
-       aggressive_pool: $AGG_POOL
-       retry_interval: 3
-       dial_timeout: 10")
+    addr: \"$ADDR\"
+    connection_pool: $POOL
+    aggressive_pool: $AGG_POOL
+    retry_interval: 3
+    dial_timeout: 10")
 
        COUNT=$((COUNT+1))
        echo -e "${GREEN}✓ Path added: $T -> $ADDR (pool: $POOL, aggressive: $AGG_POOL)${NC}"
@@ -405,55 +405,59 @@ install_client() {
    [[ $VERBOSE =~ ^[Yy]$ ]] && VERBOSE="true" || VERBOSE="false"
 
    CONFIG_FILE="$CONFIG_DIR/client.yaml"
+
+   # Write the initial part of the config
    cat > "$CONFIG_FILE" << EOF
-   mode: "client"
-   psk: "${PSK}"
-   profile: "${PROFILE}"
-   verbose: ${VERBOSE}
+mode: "client"
+psk: "${PSK}"
+profile: "${PROFILE}"
+verbose: ${VERBOSE}
 
-   paths:
-   EOF
+paths:
+EOF
 
+   # Append each path entry
    for path_entry in "${PATH_ENTRIES[@]}"; do
        printf "%s\n" "$path_entry" >> "$CONFIG_FILE"
    done
 
+   # Append the rest of the configuration
    cat >> "$CONFIG_FILE" << 'EOF'
 
-   smux:
-     keepalive: 8
-     max_recv: 8388608
-     max_stream: 8388608
-     frame_size: 32768
-     version: 2
+smux:
+  keepalive: 8
+  max_recv: 8388608
+  max_stream: 8388608
+  frame_size: 32768
+  version: 2
 
-   kcp:
-     nodelay: 1
-     interval: 10
-     resend: 2
-     nc: 1
-     sndwnd: 1024
-     rcvwnd: 1024
-     mtu: 1400
+kcp:
+  nodelay: 1
+  interval: 10
+  resend: 2
+  nc: 1
+  sndwnd: 1024
+  rcvwnd: 1024
+  mtu: 1400
 
-   advanced:
-     tcp_nodelay: true
-     tcp_keepalive: 15
-     tcp_read_buffer: 8388608
-     tcp_write_buffer: 8388608
-     websocket_read_buffer: 262144
-     websocket_write_buffer: 262144
-     websocket_compression: false
-     cleanup_interval: 3
-     session_timeout: 30
-     connection_timeout: 60
-     stream_timeout: 120
-     max_connections: 2000
-     max_udp_flows: 1000
-     udp_flow_timeout: 300
-     udp_buffer_size: 4194304
+advanced:
+  tcp_nodelay: true
+  tcp_keepalive: 15
+  tcp_read_buffer: 8388608
+  tcp_write_buffer: 8388608
+  websocket_read_buffer: 262144
+  websocket_write_buffer: 262144
+  websocket_compression: false
+  cleanup_interval: 3
+  session_timeout: 30
+  connection_timeout: 60
+  stream_timeout: 120
+  max_connections: 2000
+  max_udp_flows: 1000
+  udp_flow_timeout: 300
+  udp_buffer_size: 4194304
 
-   heartbeat: 10
+heartbeat: 10
 EOF
 
     create_systemd_service "client"
