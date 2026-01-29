@@ -14,28 +14,12 @@ CONFIG_DIR="/etc/DaggerConnect"
 SYSTEMD_DIR="/etc/systemd/system"
 
 GITHUB_REPO="https://github.com/itsFLoKi/DaggerConnect"
-BINARY_URL="$GITHUB_REPO/raw/main/DaggerConnect"
+BINARY_URL="https://github.com/itsFLoKi/DaggerConnect/releases/download/v1.0/DaggerConnect"
 
 show_banner() {
     echo -e "${CYAN}"
-    echo "
-  ██████  █████  ██████  ██████  ███████  ██████  ███
-  ██   ██ ██  ██ ██   ██ ██   ██ ██      ██    ██  ██
-  ██████  ██   ██ ██████  ██   ██ █████   ██    ██  ██
-  ██   ██ ██  ██ ██   ██ ██   ██ ██      ██    ██  ██
-  ██████  █████  ██   ██ ██████  ███████  ██████  ███
-
-             __o__
-            /  / \  \
-           /  /   \  \  DaggerConnect
-          /  / | | \  \ Reverse Tunnel Installer
-         /  /  | |  \  \
-        /  /   | |   \  \
-       /  /____| |____\  \
-      /____________________\
-"
     echo -e "${NC}"
-    echo -e "${GREEN}        DaggerConnect Installer v2.3${NC}"
+    echo -e "${GREEN}        DaggerConnect Installer${NC}"
     echo ""
 }
 
@@ -62,7 +46,7 @@ install_dependencies() {
 
 get_current_version() {
     if [ -f "$INSTALL_DIR/DaggerConnect" ]; then
-        VERSION=$("$INSTALL_DIR/DaggerConnect" -v 2>&1 | grep -oP 'v\d+\.\d+\.\d+' || echo "unknown")
+        VERSION=$("$INSTALL_DIR/DaggerConnect" -v 2>&1 | grep -oP 'v\d+\.\d+' || echo "unknown")
         echo "$VERSION"
     else
         echo "not-installed"
@@ -73,7 +57,6 @@ download_binary() {
     echo -e "${YELLOW}⬇️  Downloading DaggerConnect binary...${NC}"
     mkdir -p "$INSTALL_DIR"
 
-    # Backup old binary if exists
     if [ -f "$INSTALL_DIR/DaggerConnect" ]; then
         mv "$INSTALL_DIR/DaggerConnect" "$INSTALL_DIR/DaggerConnect.backup"
     fi
@@ -83,17 +66,15 @@ download_binary() {
         echo -e "${GREEN}✓ DaggerConnect downloaded successfully${NC}"
 
         if "$INSTALL_DIR/DaggerConnect" -v &>/dev/null; then
-            VERSION=$("$INSTALL_DIR/DaggerConnect" -v 2>&1 | grep -oP 'v\d+\.\d+\.\d+' || echo "v1.1.3")
+            VERSION=$("$INSTALL_DIR/DaggerConnect" -v 2>&1 | grep -oP 'v\d+\.\d+' || echo "v1.0")
             echo -e "${CYAN}ℹ️  Version: $VERSION${NC}"
         fi
 
-        # Remove backup if download successful
         rm -f "$INSTALL_DIR/DaggerConnect.backup"
     else
         echo -e "${RED}✖ Failed to download DaggerConnect binary${NC}"
         echo -e "${YELLOW}Please check your internet connection and try again${NC}"
 
-        # Restore backup if download failed
         if [ -f "$INSTALL_DIR/DaggerConnect.backup" ]; then
             mv "$INSTALL_DIR/DaggerConnect.backup" "$INSTALL_DIR/DaggerConnect"
             echo -e "${YELLOW}⚠️  Restored previous version${NC}"
@@ -152,7 +133,6 @@ update_binary() {
     echo -e "  Current Version:  ${GREEN}$NEW_VERSION${NC}"
     echo ""
 
-    # Ask to restart services
     if systemctl is-enabled DaggerConnect-server &>/dev/null || systemctl is-enabled DaggerConnect-client &>/dev/null; then
         read -p "Restart services now? [Y/n]: " restart
         if [[ ! $restart =~ ^[Nn]$ ]]; then
@@ -212,7 +192,7 @@ install_server() {
     echo ""
 
     echo -e "${YELLOW}Select Transport Type:${NC}"
-    echo "  1) tcpmux  - TCP Multiplexing"
+    echo "  1) tcpmux  - TCP Multiplexing (Recommended)"
     echo "  2) kcpmux  - KCP Multiplexing (UDP based)"
     echo "  3) wsmux   - WebSocket"
     echo "  4) wssmux  - WebSocket Secure (TLS)"
@@ -228,8 +208,8 @@ install_server() {
 
     echo ""
     echo -e "${CYAN}Tunnel Port: Port for communication between Server and Client${NC}"
-    read -p "Tunnel Port [2020]: " LISTEN_PORT
-    LISTEN_PORT=${LISTEN_PORT:-2020}
+    read -p "Tunnel Port [4000]: " LISTEN_PORT
+    LISTEN_PORT=${LISTEN_PORT:-4000}
 
     echo ""
     while true; do
@@ -244,10 +224,11 @@ install_server() {
 
     echo ""
     echo -e "${YELLOW}Select Performance Profile:${NC}"
-    echo "  1) balanced      - Standard balanced performance"
+    echo "  1) balanced      - Standard balanced performance (Recommended)"
     echo "  2) aggressive    - High speed, aggressive settings"
     echo "  3) latency       - Optimized for low latency"
     echo "  4) cpu-efficient - Low CPU usage"
+    echo "  5) gaming        - Optimized for gaming (low latency + high speed)"
     echo ""
     read -p "Choice [1-5]: " profile_choice
     case $profile_choice in
@@ -255,6 +236,7 @@ install_server() {
         2) PROFILE="aggressive" ;;
         3) PROFILE="latency" ;;
         4) PROFILE="cpu-efficient" ;;
+        5) PROFILE="gaming" ;;
         *) PROFILE="balanced" ;;
     esac
 
@@ -270,6 +252,14 @@ install_server() {
             CERT_FILE=""
             KEY_FILE=""
         fi
+    fi
+
+    echo ""
+    read -p "Enable Traffic Obfuscation? [Y/n]: " OBFUS_ENABLED
+    if [[ ! $OBFUS_ENABLED =~ ^[Nn]$ ]]; then
+        OBFUS_ENABLED="true"
+    else
+        OBFUS_ENABLED="false"
     fi
 
     echo ""
@@ -297,8 +287,14 @@ install_server() {
             fi
         done
 
+        read -p "Target address (default: 127.0.0.1): " TARGET_ADDR
+        TARGET_ADDR=${TARGET_ADDR:-127.0.0.1}
+
+        read -p "Target port (default: same as bind port): " TARGET_PORT
+        TARGET_PORT=${TARGET_PORT:-$BIND_PORT}
+
         BIND="0.0.0.0:${BIND_PORT}"
-        TARGET="0.0.0.0:${BIND_PORT}"
+        TARGET="${TARGET_ADDR}:${TARGET_PORT}"
 
         case $proto_choice in
             1)
@@ -345,43 +341,17 @@ key_file: "$KEY_FILE"
 EOF
     fi
 
-    echo -e "maps:\n$MAPPINGS\n" >> "$CONFIG_FILE"
+    echo -e "maps:\n$MAPPINGS" >> "$CONFIG_FILE"
 
-    cat >> "$CONFIG_FILE" << 'EOF'
-smux:
-  keepalive: 8
-  max_recv: 8388608
-  max_stream: 8388608
-  frame_size: 32768
-  version: 2
+    cat >> "$CONFIG_FILE" << EOF
 
-kcp:
-  nodelay: 1
-  interval: 10
-  resend: 2
-  nc: 1
-  sndwnd: 1024
-  rcvwnd: 1024
-  mtu: 1400
-
-advanced:
-  tcp_nodelay: true
-  tcp_keepalive: 15
-  tcp_read_buffer: 8388608
-  tcp_write_buffer: 8388608
-  websocket_read_buffer: 262144
-  websocket_write_buffer: 262144
-  websocket_compression: false
-  cleanup_interval: 3
-  session_timeout: 30
-  connection_timeout: 60
-  stream_timeout: 120
-  max_connections: 2000
-  max_udp_flows: 1000
-  udp_flow_timeout: 300
-  udp_buffer_size: 4194304
-
-heartbeat: 10
+obfuscation:
+  enabled: ${OBFUS_ENABLED}
+  min_padding: 16
+  max_padding: 512
+  min_delay_ms: 5
+  max_delay_ms: 50
+  burst_chance: 0.15
 EOF
 
     create_systemd_service "server"
@@ -395,10 +365,11 @@ EOF
     echo -e "${GREEN}═══════════════════════════════════════${NC}"
     echo ""
     echo -e "${CYAN}Important Info:${NC}"
-    echo -e "  Tunnel Port: ${GREEN} ${LISTEN_PORT} ${NC}"
-    echo -e "  PSK: ${GREEN} ${PSK} ${NC}"
-    echo -e "  Transport: ${GREEN} ${TRANSPORT} ${NC}"
-    echo -e "  Profile: ${GREEN} ${PROFILE} ${NC}"
+    echo -e "  Tunnel Port: ${GREEN}${LISTEN_PORT}${NC}"
+    echo -e "  PSK: ${GREEN}${PSK}${NC}"
+    echo -e "  Transport: ${GREEN}${TRANSPORT}${NC}"
+    echo -e "  Profile: ${GREEN}${PROFILE}${NC}"
+    echo -e "  Obfuscation: ${GREEN}${OBFUS_ENABLED}${NC}"
     echo ""
     echo "  View logs: journalctl -u DaggerConnect-server -f"
     echo ""
@@ -427,80 +398,96 @@ install_client() {
 
     echo ""
     echo -e "${YELLOW}Select Performance Profile:${NC}"
-    echo "  1) balanced      - Standard balanced performance"
+    echo "  1) balanced      - Standard balanced performance (Recommended)"
     echo "  2) aggressive    - High speed, aggressive settings"
     echo "  3) latency       - Optimized for low latency"
     echo "  4) cpu-efficient - Low CPU usage"
+    echo "  5) gaming        - Optimized for gaming (low latency + high speed)"
     echo ""
-    read -p "Choice [1-4]: " profile_choice
+    read -p "Choice [1-5]: " profile_choice
     case $profile_choice in
         1) PROFILE="balanced" ;;
         2) PROFILE="aggressive" ;;
         3) PROFILE="latency" ;;
         4) PROFILE="cpu-efficient" ;;
+        5) PROFILE="gaming" ;;
         *) PROFILE="balanced" ;;
     esac
 
-   echo ""
-   echo -e "${CYAN}═══════════════════════════════════════${NC}"
-   echo -e "${CYAN}      CONNECTION PATHS${NC}"
-   echo -e "${CYAN}═══════════════════════════════════════${NC}"
+    echo ""
+    read -p "Enable Traffic Obfuscation? [Y/n]: " OBFUS_ENABLED
+    if [[ ! $OBFUS_ENABLED =~ ^[Nn]$ ]]; then
+        OBFUS_ENABLED="true"
+    else
+        OBFUS_ENABLED="false"
+    fi
 
-   declare -a PATH_ENTRIES=()
-   COUNT=0
+    echo ""
+    echo -e "${CYAN}═══════════════════════════════════════${NC}"
+    echo -e "${CYAN}      CONNECTION PATHS${NC}"
+    echo -e "${CYAN}═══════════════════════════════════════${NC}"
 
-   while true; do
-       echo ""
-       echo -e "${YELLOW}Add Connection Path #$((COUNT+1))${NC}"
+    declare -a PATH_ENTRIES=()
+    COUNT=0
 
-       echo "Select Transport Type:"
-       echo "  1) tcpmux  - TCP Multiplexing"
-       echo "  2) kcpmux  - KCP Multiplexing (UDP based)"
-       echo "  3) wsmux   - WebSocket"
-       echo "  4) wssmux  - WebSocket Secure (TLS)"
-       echo ""
-       read -p "Choice [1-4]: " transport_choice
-       case $transport_choice in
-           1) T="tcpmux" ;;
-           2) T="kcpmux" ;;
-           3) T="wsmux" ;;
-           4) T="wssmux" ;;
-           *) T="tcpmux" ;;
-       esac
+    while true; do
+        echo ""
+        echo -e "${YELLOW}Add Connection Path #$((COUNT+1))${NC}"
 
-       read -p "Server address with Tunnel Port (e.g., 1.2.3.4:2020): " ADDR
-       if [ -z "$ADDR" ]; then
-           echo -e "${RED}Address cannot be empty!${NC}"
-           continue
-       fi
+        echo "Select Transport Type:"
+        echo "  1) tcpmux  - TCP Multiplexing (Recommended)"
+        echo "  2) kcpmux  - KCP Multiplexing (UDP based)"
+        echo "  3) wsmux   - WebSocket"
+        echo "  4) wssmux  - WebSocket Secure (TLS)"
+        echo ""
+        read -p "Choice [1-4]: " transport_choice
+        case $transport_choice in
+            1) T="tcpmux" ;;
+            2) T="kcpmux" ;;
+            3) T="wsmux" ;;
+            4) T="wssmux" ;;
+            *) T="tcpmux" ;;
+        esac
 
-       read -p "Connection pool size [2]: " POOL
-       POOL=${POOL:-2}
+        read -p "Server address with Tunnel Port (e.g., 1.2.3.4:4000): " ADDR
+        if [ -z "$ADDR" ]; then
+            echo -e "${RED}Address cannot be empty!${NC}"
+            continue
+        fi
 
-       read -p "Enable aggressive pool? [y/N]: " AGG
-       [[ $AGG =~ ^[Yy]$ ]] && AGG_POOL="true" || AGG_POOL="false"
+        read -p "Connection pool size [2]: " POOL
+        POOL=${POOL:-2}
 
-       PATH_ENTRIES+=("  - transport: \"$T\"
+        read -p "Enable aggressive pool? [y/N]: " AGG
+        [[ $AGG =~ ^[Yy]$ ]] && AGG_POOL="true" || AGG_POOL="false"
+
+        read -p "Retry interval (seconds) [3]: " RETRY
+        RETRY=${RETRY:-3}
+
+        read -p "Dial timeout (seconds) [10]: " DIAL_TIMEOUT
+        DIAL_TIMEOUT=${DIAL_TIMEOUT:-10}
+
+        PATH_ENTRIES+=("  - transport: \"$T\"
     addr: \"$ADDR\"
     connection_pool: $POOL
     aggressive_pool: $AGG_POOL
-    retry_interval: 3
-    dial_timeout: 10")
+    retry_interval: $RETRY
+    dial_timeout: $DIAL_TIMEOUT")
 
-       COUNT=$((COUNT+1))
-       echo -e "${GREEN}✓ Path added: $T -> $ADDR (pool: $POOL, aggressive: $AGG_POOL)${NC}"
+        COUNT=$((COUNT+1))
+        echo -e "${GREEN}✓ Path added: $T -> $ADDR (pool: $POOL, aggressive: $AGG_POOL)${NC}"
 
-       read -p "Add another path? [y/N]: " MORE
-       [[ ! $MORE =~ ^[Yy]$ ]] && break
-   done
+        read -p "Add another path? [y/N]: " MORE
+        [[ ! $MORE =~ ^[Yy]$ ]] && break
+    done
 
-   echo ""
-   read -p "Enable verbose logging? [y/N]: " VERBOSE
-   [[ $VERBOSE =~ ^[Yy]$ ]] && VERBOSE="true" || VERBOSE="false"
+    echo ""
+    read -p "Enable verbose logging? [y/N]: " VERBOSE
+    [[ $VERBOSE =~ ^[Yy]$ ]] && VERBOSE="true" || VERBOSE="false"
 
-   CONFIG_FILE="$CONFIG_DIR/client.yaml"
+    CONFIG_FILE="$CONFIG_DIR/client.yaml"
 
-   cat > "$CONFIG_FILE" << EOF
+    cat > "$CONFIG_FILE" << EOF
 mode: "client"
 psk: "${PSK}"
 profile: "${PROFILE}"
@@ -509,46 +496,19 @@ verbose: ${VERBOSE}
 paths:
 EOF
 
-   for path_entry in "${PATH_ENTRIES[@]}"; do
-       printf "%s\n" "$path_entry" >> "$CONFIG_FILE"
-   done
+    for path_entry in "${PATH_ENTRIES[@]}"; do
+        printf "%s\n" "$path_entry" >> "$CONFIG_FILE"
+    done
 
-   cat >> "$CONFIG_FILE" << 'EOF'
+    cat >> "$CONFIG_FILE" << EOF
 
-smux:
-  keepalive: 8
-  max_recv: 8388608
-  max_stream: 8388608
-  frame_size: 32768
-  version: 2
-
-kcp:
-  nodelay: 1
-  interval: 10
-  resend: 2
-  nc: 1
-  sndwnd: 1024
-  rcvwnd: 1024
-  mtu: 1400
-
-advanced:
-  tcp_nodelay: true
-  tcp_keepalive: 15
-  tcp_read_buffer: 8388608
-  tcp_write_buffer: 8388608
-  websocket_read_buffer: 262144
-  websocket_write_buffer: 262144
-  websocket_compression: false
-  cleanup_interval: 3
-  session_timeout: 30
-  connection_timeout: 60
-  stream_timeout: 120
-  max_connections: 2000
-  max_udp_flows: 1000
-  udp_flow_timeout: 300
-  udp_buffer_size: 4194304
-
-heartbeat: 10
+obfuscation:
+  enabled: ${OBFUS_ENABLED}
+  min_padding: 16
+  max_padding: 512
+  min_delay_ms: 5
+  max_delay_ms: 50
+  burst_chance: 0.15
 EOF
 
     create_systemd_service "client"
@@ -560,6 +520,10 @@ EOF
     echo -e "${GREEN}═══════════════════════════════════════${NC}"
     echo -e "${GREEN}   ✓ Client installation complete!${NC}"
     echo -e "${GREEN}═══════════════════════════════════════${NC}"
+    echo ""
+    echo -e "${CYAN}Important Info:${NC}"
+    echo -e "  Profile: ${GREEN}${PROFILE}${NC}"
+    echo -e "  Obfuscation: ${GREEN}${OBFUS_ENABLED}${NC}"
     echo ""
     echo "  View logs: journalctl -u DaggerConnect-client -f"
     echo ""
@@ -709,7 +673,6 @@ uninstall_DaggerConnect() {
 main_menu() {
     show_banner
 
-    # Show current version if installed
     CURRENT_VER=$(get_current_version)
     if [ "$CURRENT_VER" != "not-installed" ]; then
         echo -e "${CYAN}Current Version: ${GREEN}$CURRENT_VER${NC}"
