@@ -5,7 +5,7 @@
 **ریورس تانل قدرتمند با HTTP Mimicry و Traffic Obfuscation**
 
 []() 
-[![BUY LICENSE WITH BOT | خرید لایسنس از ربات](https://github.com/CLorant/readme-social-icons/raw/main/small/colored/telegram.svg)](https://t.me/DaggerConnectBot)
+[![BUY LICENSE WITH BOT | خرید لایسنس از ربات]](https://t.me/DaggerConnectBot)
 [ویژگی‌ها](#-ویژگیها) • [نصب سریع](#-نصب-سریع) • [مثال‌ها](#-مثالها) • [پیکربندی](#-پیکربندی-پیشرفته)
 
 </div>
@@ -1384,6 +1384,7 @@ Made with ❤️ by [itsFLoKi](https://github.com/itsFLoKi)
 [⬆ برگشت به بالا](#-daggerconnect)
 
 </div>
+
 
 
 
