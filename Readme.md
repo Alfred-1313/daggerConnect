@@ -4,7 +4,7 @@
 
 **ریورس تانل قدرتمند با HTTP Mimicry و Traffic Obfuscation**
 
-خرید لایسنس : @CentralFourOne
+خرید لایسنس : @DaggerConenct
 
 [ویژگی‌ها](#-ویژگیها) • [نصب سریع](#-نصب-سریع) • [مثال‌ها](#-مثالها) • [پیکربندی](#-پیکربندی-پیشرفته)
 
@@ -1384,5 +1384,6 @@ Made with ❤️ by [itsFLoKi](https://github.com/itsFLoKi)
 [⬆ برگشت به بالا](#-daggerconnect)
 
 </div>
+
 
 
