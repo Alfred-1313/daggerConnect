@@ -139,7 +139,7 @@
 ### نصب خودکار با اسکریپت Installer (توصیه می‌شود)
 
 ```bash
-curl -O https://raw.githubusercontent.com/itsFLoKi/DaggerConnect/main/setup.sh
+curl -O https://raw.githubusercontent.com/Alfred-1313/DaggerConnect/main/setup.sh
 chmod +x setup.sh
 sudo ./setup.sh
 ```
@@ -1386,6 +1386,7 @@ Made with ❤️ by [itsFLoKi](https://github.com/itsFLoKi)
 [⬆ برگشت به بالا](#-daggerconnect)
 
 </div>
+
 
 
 
